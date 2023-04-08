@@ -20,16 +20,16 @@ type OpsgenieOptions struct {
 }
 
 type OpsgenieNotification struct {
-	Alias       string `json:"alias,omitempty"`
-	Description string `json:"description,omitempty"`
-	VisibleTo   string `json:"visibleTo,omitempty"`
-	Actions     string `json:"actions,omitempty"`
-	Tags        string `json:"tags,omitempty"`
-	Details     string `json:"details,omitempty"`
-	Entity      string `json:"entity,omitempty"`
-	Priority    string `json:"priority,omitempty"`
-	User        string `json:"user,omitempty"`
-	Note        string `json:"note,omitempty"`
+	Alias       string            `json:"alias,omitempty"`
+	Description string            `json:"description,omitempty"`
+	VisibleTo   []alert.Responder `json:"visibleTo,omitempty"`
+	Actions     []string          `json:"actions,omitempty"`
+	Tags        []string          `json:"tags,omitempty"`
+	Details     map[string]string `json:"details,omitempty"`
+	Entity      string            `json:"entity,omitempty"`
+	Priority    string            `json:"priority,omitempty"`
+	User        string            `json:"user,omitempty"`
+	Note        string            `json:"note,omitempty"`
 }
 
 func (n *OpsgenieNotification) GetTemplater(name string, f texttemplate.FuncMap) (Templater, error) {
@@ -41,22 +41,22 @@ func (n *OpsgenieNotification) GetTemplater(name string, f texttemplate.FuncMap)
 	if err != nil {
 		return nil, err
 	}
-	visibleTo, err := texttemplate.New(name).Funcs(f).Parse(n.VisibleTo)
-	if err != nil {
-		return nil, err
-	}
-	actions, err := texttemplate.New(name).Funcs(f).Parse(n.Actions)
-	if err != nil {
-		return nil, err
-	}
-	tags, err := texttemplate.New(name).Funcs(f).Parse(n.Tags)
-	if err != nil {
-		return nil, err
-	}
-	details, err := texttemplate.New(name).Funcs(f).Parse(n.Details)
-	if err != nil {
-		return nil, err
-	}
+	//visibleTo, err := texttemplate.New(name).Funcs(f).Parse(n.VisibleTo)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//actions, err := texttemplate.New(name).Funcs(f).Parse(n.Actions)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//tags, err := texttemplate.New(name).Funcs(f).Parse(n.Tags)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//details, err := texttemplate.New(name).Funcs(f).Parse(n.Details)
+	//if err != nil {
+	//	return nil, err
+	//}
 	entity, err := texttemplate.New(name).Funcs(f).Parse(n.Entity)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (n *OpsgenieNotification) GetTemplater(name string, f texttemplate.FuncMap)
 		if notification.Opsgenie == nil {
 			notification.Opsgenie = &OpsgenieNotification{}
 		}
-		var aliasData, descData, visibleToData, actionsData, tagsData, detailsData, entityData, priorityData, userData, noteData bytes.Buffer
+		var aliasData, descData, entityData, priorityData, userData, noteData bytes.Buffer
 
 		if err := alias.Execute(&aliasData, vars); err != nil {
 			return err
@@ -85,18 +85,18 @@ func (n *OpsgenieNotification) GetTemplater(name string, f texttemplate.FuncMap)
 		if err := desc.Execute(&descData, vars); err != nil {
 			return err
 		}
-		if err := visibleTo.Execute(&visibleToData, vars); err != nil {
-			return err
-		}
-		if err := actions.Execute(&actionsData, vars); err != nil {
-			return err
-		}
-		if err := tags.Execute(&tagsData, vars); err != nil {
-			return err
-		}
-		if err := details.Execute(&detailsData, vars); err != nil {
-			return err
-		}
+		//if err := visibleTo.Execute(&visibleToData, vars); err != nil {
+		//	return err
+		//}
+		//if err := actions.Execute(&actionsData, vars); err != nil {
+		//	return err
+		//}
+		//if err := tags.Execute(&tagsData, vars); err != nil {
+		//	return err
+		//}
+		//if err := details.Execute(&detailsData, vars); err != nil {
+		//	return err
+		//}
 		if err := entity.Execute(&entityData, vars); err != nil {
 			return err
 		}
@@ -112,10 +112,14 @@ func (n *OpsgenieNotification) GetTemplater(name string, f texttemplate.FuncMap)
 
 		notification.Opsgenie.Alias = aliasData.String()
 		notification.Opsgenie.Description = descData.String()
-		notification.Opsgenie.VisibleTo = visibleToData.String()
-		notification.Opsgenie.Actions = actionsData.String()
-		notification.Opsgenie.Tags = tagsData.String()
-		notification.Opsgenie.Details = detailsData.String()
+		//notification.Opsgenie.VisibleTo = visibleToData.String()
+		notification.Opsgenie.VisibleTo = n.VisibleTo
+		//notification.Opsgenie.Actions = actionsData.String()
+		notification.Opsgenie.Actions = n.Actions
+		//notification.Opsgenie.Tags = tagsData.String()
+		notification.Opsgenie.Tags = n.Tags
+		notification.Opsgenie.Details = n.Details
+		//notification.Opsgenie.Details = detailsData.String()
 		notification.Opsgenie.Entity = entityData.String()
 		notification.Opsgenie.Priority = priorityData.String()
 		notification.Opsgenie.User = userData.String()
@@ -147,14 +151,26 @@ func (s *opsgenieService) Send(notification Notification, dest Destination) erro
 	})
 	description := ""
 	alias := ""
+	entity := ""
+	priority := ""
+	user := ""
+	note := ""
+	actions := []string(nil)
 	tags := []string(nil)
+	details := map[string]string(nil)
+	var visibleTo []alert.Responder
 
-	//var visibleTo = ""
 	if notification.Opsgenie != nil {
 		description = notification.Opsgenie.Description
 		alias = notification.Opsgenie.Alias
-		//visibleTo = notification.Opsgenie.VisibleTo
-		//tags = notification.Opsgenie.Tags
+		entity = notification.Opsgenie.Entity
+		priority = notification.Opsgenie.Priority
+		user = notification.Opsgenie.User
+		note = notification.Opsgenie.Note
+		actions = notification.Opsgenie.Actions
+		tags = notification.Opsgenie.Tags
+		details = notification.Opsgenie.Details
+		visibleTo = notification.Opsgenie.VisibleTo
 	}
 
 	_, err := alertClient.Create(context.TODO(), &alert.CreateAlertRequest{
@@ -167,15 +183,15 @@ func (s *opsgenieService) Send(notification Notification, dest Destination) erro
 				Id:   dest.Recipient,
 			},
 		},
-		//VisibleTo: []alert.Responder{json.Unmarshal([]byte(visibleTo, ??))},
-		Actions:  nil,
-		Tags:     tags,
-		Details:  nil,
-		Entity:   "",
-		Source:   "Argo CD",
-		Priority: "",
-		User:     "",
-		Note:     "",
+		Actions:   actions,
+		Tags:      tags,
+		Details:   details,
+		Entity:    entity,
+		Source:    "Argo CD",
+		Priority:  alert.Priority(priority),
+		User:      user,
+		Note:      note,
+		VisibleTo: visibleTo,
 	})
 	return err
 }
